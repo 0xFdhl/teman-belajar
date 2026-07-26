@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  font-family: "Inter", system-ui, sans-serif;
+  @apply antialiased;
+}
+
+@layer utilities {
+  .animate-in {
+    animation: fadeIn 0.2s ease-out, slideInRight 0.2s ease-out;
+  }
+  .animate-fade {
+    animation: fadeIn 0.2s ease-out;
+  }
+  .animate-pop {
+    animation: pop 0.2s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(1rem); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes pop {
+  0% { transform: scale(0.95); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { transform: translateY(0.75rem); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-0.5rem); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-fade-up {
+  animation: fadeInUp 0.3s ease-out both;
+}
+.animate-fade-up-1 { animation: fadeInUp 0.3s ease-out 0.05s both; }
+.animate-fade-up-2 { animation: fadeInUp 0.3s ease-out 0.1s both; }
+.animate-fade-up-3 { animation: fadeInUp 0.3s ease-out 0.15s both; }
+.animate-fade-up-4 { animation: fadeInUp 0.3s ease-out 0.2s both; }
+.animate-slide-down {
+  animation: slideDown 0.2s ease-out;
+}
+
+/* Focus ring for accessibility */
+*:focus-visible {
+  outline: 2px solid rgb(20 184 166);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Smooth page transitions */
+main > div {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.5);
+}
