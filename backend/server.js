@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 
 import { seedIfEmpty } from "./db/index.js";
@@ -41,9 +42,18 @@ app.use("/api/tasks", tasksRoutes);
 app.get("/api/health", (req, res) => res.json({ ok: true, timestamp: new Date().toISOString() }));
 
 // Tangani 404 endpoint yang tidak dikenal
-app.use((req, res) => {
+app.use("/api", (req, res) => {
   res.status(404).json({ error: "Endpoint tidak ditemukan." });
 });
+
+// Sajikan frontend production (frontend/dist) jika sudah di-build
+const distDir = path.resolve(__dirname, "../frontend/dist");
+if (fs.existsSync(distDir)) {
+  app.use(express.static(distDir));
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(distDir, "index.html"));
+  });
+}
 
 // Middleware error handling terpusat
 // eslint-disable-next-line no-unused-vars

@@ -1,0 +1,13 @@
+{
+  "name": "teman-belajar-ai",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=teman-belajar-frontend",
+    "start": "npm run start --workspace=teman-belajar-backend"
+  }
+}
