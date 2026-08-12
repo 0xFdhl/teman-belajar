@@ -1,5 +1,0 @@
-**/node_modules
-**/dist
-**/uploads
-backend/db/*.sqlite3*
-.env

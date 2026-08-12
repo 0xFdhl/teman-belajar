@@ -1,9 +1,13 @@
 import React from "react";
 import { Search, Bell, ChevronDown, Sun, Moon } from "lucide-react";
 import { useTheme } from "../lib/ThemeContext.jsx";
+import { useAuth } from "../lib/AuthContext.jsx";
 
 export default function Topbar() {
   const { dark, setDark } = useTheme();
+  const { user } = useAuth();
+  const name = user?.name || "Siswa";
+  const initial = (name[0] || "S").toUpperCase();
 
   return (
     <div className="flex items-center justify-between mb-6">
@@ -40,9 +44,9 @@ export default function Topbar() {
         </button>
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-semibold text-sm">
-            Y
+            {initial}
           </div>
-          <span className={`text-sm font-medium ${dark ? "text-slate-200" : "text-slate-700"}`}>Yogi</span>
+          <span className={`text-sm font-medium ${dark ? "text-slate-200" : "text-slate-700"}`}>{name}</span>
           <ChevronDown size={14} className="text-slate-400" />
         </div>
       </div>

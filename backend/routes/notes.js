@@ -1,12 +1,32 @@
 import { Router } from "express";
 import multer from "multer";
 import path from "path";
+import fs from "fs";
+import os from "os";
 import { fileURLToPath } from "url";
 import { db } from "../db/index.js";
 import { analyzeNoteAndGenerateQuiz } from "../services/gemini.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadDir = path.join(__dirname, "..", "uploads");
+// Di Vercel filesystem read-only kecuali /tmp -> upload disimpan ke sana (ephemeral).
+const uploadDir = process.env.VERCEL === "1"
+  ? path.join(os.tmpdir(), "teman-belajar-uploads")
+  : path.join(__dirname, "..", "uploads");
+fs.mkdirSync(uploadDir, { recursive: true });
+
+// Batas upload per user supaya request AI tidak langsung habis kena rate limit.
+const UPLOAD_LIMIT = 5;          // maksimal ...
+const UPLOAD_WINDOW_MS = 60_000; // ... dalam 1 menit
+const uploadLog = new Map(); // key (userId/IP) -> [timestamps]
+
+function checkUploadLimit(key) {
+  const now = Date.now();
+  const arr = (uploadLog.get(key) || []).filter((t) => now - t < UPLOAD_WINDOW_MS);
+  if (arr.length >= UPLOAD_LIMIT) return false;
+  arr.push(now);
+  uploadLog.set(key, arr);
+  return true;
+}
 
 const storage = multer.diskStorage({
   destination: uploadDir,
@@ -33,6 +53,13 @@ router.get("/", (req, res) => {
 // Upload a note, then kick off AI analysis + quiz generation.
 router.post("/upload", upload.single("file"), async (req, res) => {
   try {
+    const key = req.user?.id ? `u${req.user.id}` : `ip${req.ip || "unknown"}`;
+    if (!checkUploadLimit(key)) {
+      return res.status(429).json({
+        error: `Terlalu banyak upload (maks ${UPLOAD_LIMIT}/menit). Tunggu sebentar lalu coba lagi.`,
+      });
+    }
+
     const { subject_id, title } = req.body;
     if (!req.file) return res.status(400).json({ error: "File wajib diunggah." });
     if (!subject_id) return res.status(400).json({ error: "Mata pelajaran wajib dipilih." });

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { TrendingUp, ClipboardList, Calendar as CalendarIcon, Flame, FileText } from "lucide-react";
 import { useTheme } from "../lib/ThemeContext.jsx";
-import { Card, StatCard, ProgressBar, Spinner, ErrorState } from "../components/ui.jsx";
+import { Card, StatCard, ProgressBar, Spinner, ErrorState, DataTable } from "../components/ui.jsx";
 import { colorForSubjectName } from "../lib/subjectColors.js";
 import { api } from "../lib/api.js";
 
@@ -96,15 +96,15 @@ export default function Dashboard() {
       </h1>
       <p className={`text-sm mb-6 ${dark ? "text-slate-400" : "text-slate-500"}`}>Semangat belajar hari ini!</p>
 
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <StatCard label="Skor Terakhir" value={`${stats.lastScore}%`} sub="Dari 10 soal terakhir" icon={<TrendingUp size={18} />} />
         <StatCard label="Soal Dikerjakan" value={stats.totalQuestionsAnswered} sub="Total soal" icon={<ClipboardList size={18} />} />
         <StatCard label="Tugas Mendatang" value={stats.upcomingTasksCount} sub="Belum selesai" icon={<CalendarIcon size={18} />} />
         <StatCard label="Streak Belajar" value={stats.streakDays} sub="Hari berturut-turut 🔥" icon={<Flame size={18} />} />
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-4">
-        <Card className="col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        <Card className="lg:col-span-2">
           <div className={`text-sm font-semibold mb-4 ${dark ? "text-white" : "text-slate-800"}`}>Progres per Mapel</div>
           <div className="flex flex-col gap-4">
             {progressPerSubject.map((m) => (
@@ -147,21 +147,28 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
         <MiniCalendar />
-        <Card className="col-span-2">
+        <Card className="lg:col-span-2">
           <div className={`text-sm font-semibold mb-3 ${dark ? "text-white" : "text-slate-800"}`}>Deadline Mendatang</div>
-          <div className="flex flex-col gap-2">
-            {upcomingTasks.map((d) => (
-              <div key={d.id} className={`flex items-center justify-between rounded-xl p-3 ${dark ? "bg-slate-700/40" : "bg-slate-50"}`}>
-                <div>
-                  <div className={`text-sm font-medium ${dark ? "text-slate-200" : "text-slate-700"}`}>{d.title}</div>
-                  <div className="text-xs text-slate-400">{d.subject} • {d.due_date}</div>
-                </div>
-                <span className="text-xs font-medium text-rose-500 bg-rose-50 px-2 py-1 rounded-full">{daysUntil(d.due_date)}</span>
-              </div>
-            ))}
-          </div>
+          {upcomingTasks.length === 0 ? (
+            <div className="text-xs text-slate-400">Tidak ada deadline mendatang. 🎉</div>
+          ) : (
+            <DataTable head={["Tugas", "Mapel", "Deadline", "Waktu"]}>
+              {upcomingTasks.map((d) => (
+                <tr key={d.id} className={dark ? "hover:bg-slate-700/30" : "hover:bg-slate-50"}>
+                  <td className={`px-4 py-3 font-medium ${dark ? "text-slate-200" : "text-slate-700"}`}>{d.title}</td>
+                  <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">{d.subject}</td>
+                  <td className="px-4 py-3 text-xs whitespace-nowrap">{d.due_date}</td>
+                  <td className="px-4 py-3">
+                    <span className="text-xs font-medium text-rose-500 bg-rose-50 px-2 py-1 rounded-full whitespace-nowrap">
+                      {daysUntil(d.due_date)}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </DataTable>
+          )}
         </Card>
       </div>
     </div>

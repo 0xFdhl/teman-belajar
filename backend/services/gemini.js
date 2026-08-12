@@ -11,6 +11,62 @@ if (!apiKey) {
 const ai = new GoogleGenAI({ apiKey });
 const MODEL = "gemini-2.5-flash";
 
+// ---------------------------------------------------------------------------
+// Throttle & queue untuk API Gemini
+// ---------------------------------------------------------------------------
+// Antrian request AI: maksimal MAX_CONCURRENCY berjalan bersamaan, dan ada
+// jeda MIN_GAP_MS antar request supaya tidak kena rate limit Gemini.
+const MAX_CONCURRENCY = 2;
+const MIN_GAP_MS = 2500;
+
+let active = 0;
+let queue = [];
+let lastCallAt = 0;
+
+function enqueue(fn) {
+  return new Promise((resolve, reject) => {
+    queue.push({ fn, resolve, reject });
+    pump();
+  });
+}
+
+function pump() {
+  if (active >= MAX_CONCURRENCY) return;
+  const wait = Math.max(0, lastCallAt + MIN_GAP_MS - Date.now());
+  setTimeout(() => {
+    while (active < MAX_CONCURRENCY && queue.length > 0) {
+      const job = queue.shift();
+      active++;
+      lastCallAt = Date.now();
+      job.fn()
+        .then(job.resolve)
+        .catch(job.reject)
+        .finally(() => {
+          active--;
+          pump();
+        });
+    }
+  }, wait);
+}
+
+// Coba ulang dengan backoff kalau kena rate limit / quota habis.
+async function callWithRetry(fn, attempts = 4) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await enqueue(fn);
+    } catch (err) {
+      const message = err?.message || "";
+      const isRateLimit = /429|RESOURCE_EXHAUSTED|rate.?limit|quota|too many/i.test(message);
+      if (i === attempts - 1) throw err;
+      const backoff = (i + 1) * 5000 * (isRateLimit ? 2 : 1);
+      console.warn(
+        `[gemini] request gagal (${message}) — coba lagi dalam ${backoff}ms (${i + 1}/${attempts})`
+      );
+      await new Promise((r) => setTimeout(r, backoff));
+    }
+  }
+}
+
 /**
  * Membaca file catatan (gambar/PDF/teks) dan meminta Gemini untuk:
  * 1. Mengekstrak isi penting (ringkasan)
@@ -52,21 +108,23 @@ Balas HANYA dalam format JSON valid, tanpa markdown, tanpa backticks, dengan str
 }
 `.trim();
 
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { text: prompt },
-          { inlineData: { data: base64Data, mimeType: mimeType || "application/octet-stream" } },
-        ],
+  const response = await callWithRetry(() =>
+    ai.models.generateContent({
+      model: MODEL,
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: prompt },
+            { inlineData: { data: base64Data, mimeType: mimeType || "application/octet-stream" } },
+          ],
+        },
+      ],
+      config: {
+        responseMimeType: "application/json",
       },
-    ],
-    config: {
-      responseMimeType: "application/json",
-    },
-  });
+    })
+  );
 
   const raw = response.text;
   let parsed;

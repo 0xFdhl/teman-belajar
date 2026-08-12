@@ -5,6 +5,7 @@ import {
   Settings, HelpCircle, LogOut, Moon,
 } from "lucide-react";
 import { useTheme } from "../lib/ThemeContext.jsx";
+import { useAuth } from "../lib/AuthContext.jsx";
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -16,6 +17,7 @@ const NAV = [
 
 export default function Sidebar() {
   const { dark } = useTheme();
+  const { logout } = useAuth();
 
   return (
     <aside
@@ -70,6 +72,7 @@ export default function Sidebar() {
             <HelpCircle size={17} /> Bantuan
           </button>
           <button
+            onClick={logout}
             className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium ${
               dark ? "text-slate-300 hover:bg-slate-800" : "text-slate-500 hover:bg-slate-50"
             }`}

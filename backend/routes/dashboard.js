@@ -4,15 +4,16 @@ import { db } from "../db/index.js";
 const router = Router();
 
 router.get("/", (req, res) => {
-  const student = db.prepare("SELECT * FROM students LIMIT 1").get();
+  const row = req.user || db.prepare("SELECT * FROM students LIMIT 1").get();
+  const student = row
+    ? { id: row.id, name: row.name, streak_days: row.streak_days }
+    : { name: "Siswa", streak_days: 0 };
 
   const totalAttempts = db.prepare("SELECT COUNT(*) c FROM attempts").get().c;
   const lastAttemptScore = db
     .prepare(
       `SELECT ROUND(AVG(is_correct) * 100) AS pct
-       FROM attempts
-       WHERE quiz_id IS NOT NULL
-       ORDER BY attempted_at DESC LIMIT 10`
+       FROM (SELECT is_correct FROM attempts ORDER BY attempted_at DESC LIMIT 10)`
     )
     .get();
 
@@ -44,7 +45,7 @@ router.get("/", (req, res) => {
     .all();
 
   res.json({
-    student: student || { name: "Siswa", streak_days: 0 },
+    student,
     stats: {
       lastScore: lastAttemptScore?.pct ?? 0,
       totalQuestionsAnswered: totalAttempts,

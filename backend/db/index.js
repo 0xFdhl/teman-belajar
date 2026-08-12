@@ -1,9 +1,18 @@
 import Database from "better-sqlite3";
 import path from "path";
+import os from "os";
 import { fileURLToPath } from "url";
+import { hashPassword } from "../lib/password.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = path.join(__dirname, "teman-belajar.sqlite3");
+
+// Vercel Functions have a READ-ONLY filesystem except /tmp.
+// Di Vercel database ditempatkan di /tmp supaya bisa dibuat & di-seed,
+// tapi ingat: data di /tmp bersifat ephemeral (hilang saat instance cold start).
+const isVercel = process.env.VERCEL === "1";
+const dbPath = isVercel
+  ? path.join(os.tmpdir(), "teman-belajar.sqlite3")
+  : path.join(__dirname, "teman-belajar.sqlite3");
 
 export const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");
@@ -17,6 +26,9 @@ CREATE TABLE IF NOT EXISTS students (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   streak_days INTEGER NOT NULL DEFAULT 0,
+  email TEXT,
+  password_hash TEXT,
+  session_token TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -80,6 +92,32 @@ CREATE TABLE IF NOT EXISTS tasks (
 );
 `);
 
+// Migrasi: tambah kolom auth kalau tabel students sudah terlanjur dibuat tanpa kolom ini.
+const studentCols = db.prepare("PRAGMA table_info(students)").all().map((c) => c.name);
+if (!studentCols.includes("email")) db.exec("ALTER TABLE students ADD COLUMN email TEXT");
+if (!studentCols.includes("password_hash")) db.exec("ALTER TABLE students ADD COLUMN password_hash TEXT");
+if (!studentCols.includes("session_token")) db.exec("ALTER TABLE students ADD COLUMN session_token TEXT");
+
+// Akun default supaya aplikasi langsung bisa dipakai setelah seed.
+// Berlaku juga saat DB /tmp di Vercel di-seed ulang tiap cold start.
+export const DEFAULT_ACCOUNT = { email: "yogi@temanbelajar.app", password: "123456" };
+
+export function ensureDefaultAccount() {
+  const studentWithEmail = db
+    .prepare("SELECT COUNT(*) c FROM students WHERE email IS NOT NULL")
+    .get().c;
+  if (studentWithEmail > 0) return;
+  const yogi = db.prepare("SELECT id FROM students WHERE name = 'Yogi' LIMIT 1").get();
+  if (!yogi) return;
+  db.prepare("UPDATE students SET email = ?, password_hash = ? WHERE id = ?").run(
+    DEFAULT_ACCOUNT.email,
+    hashPassword(DEFAULT_ACCOUNT.password),
+    yogi.id
+  );
+}
+
+ensureDefaultAccount();
+
 export function seedIfEmpty() {
   const count = db.prepare("SELECT COUNT(*) AS c FROM subjects").get().c;
   if (count > 0) return;
@@ -104,6 +142,8 @@ export function seedIfEmpty() {
     "Yogi",
     12
   );
+
+  ensureDefaultAccount();
 
   const insertTask = db.prepare(`
     INSERT INTO tasks (subject_id, title, description, due_date, status)

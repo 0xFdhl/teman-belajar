@@ -54,3 +54,27 @@ export function ErrorState({ message }) {
     </div>
   );
 }
+
+export function DataTable({ head = [], children, minWidth = "min-w-[560px]", className = "" }) {
+  const { dark } = useTheme();
+  return (
+    <div className={`overflow-x-auto ${className}`}>
+      <table className={`w-full text-sm ${minWidth}`}>
+        <thead>
+          <tr className={`text-left text-xs uppercase tracking-wider ${
+            dark ? "bg-slate-700/40 text-slate-300" : "bg-slate-50 text-slate-500"
+          }`}>
+            {head.map((h, i) => (
+              <th key={i} className="px-4 py-3 font-semibold whitespace-nowrap first:pl-5 last:pr-5">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className={`divide-y ${dark ? "divide-slate-700" : "divide-slate-100"}`}>
+          {children}
+        </tbody>
+      </table>
+    </div>
+  );
+}
