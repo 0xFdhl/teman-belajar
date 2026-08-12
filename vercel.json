@@ -10,7 +10,7 @@
       "framework": "express",
       "functions": {
         "server.js": {
-          "nodejs": "22.x",
+          "runtime": "nodejs22.x",
           "includeFiles": "node_modules/better-sqlite3/**"
         }
       }
